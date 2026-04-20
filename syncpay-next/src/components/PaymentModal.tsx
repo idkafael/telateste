@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { SyncPayPixResponse, SyncPayStatusResponse } from "@/types/syncpay";
 
 // Interface genérica para o produto/item a ser vendido
@@ -26,24 +26,67 @@ export default function PaymentModal({
   price = 49.90,
   onPaymentConfirmed 
 }: PaymentModalProps) {
-  const [paymentMethod, setPaymentMethod] = useState<string>("pix");
   const [isProcessing, setIsProcessing] = useState(false);
   const [pixData, setPixData] = useState<SyncPayPixResponse | null>(null);
   const [pixStatus, setPixStatus] = useState<"created" | "paid" | "expired" | "canceled">("created");
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [createAttempt, setCreateAttempt] = useState(0);
 
-  // Resetar estado ao abrir/fechar modal
+  // Resetar estado ao fechar modal
   useEffect(() => {
     if (!isOpen) {
       setPixData(null);
       setPixStatus("created");
       setError(null);
       setCopied(false);
-      setPaymentMethod("pix");
       setIsProcessing(false);
+      setCreateAttempt(0);
     }
   }, [isOpen]);
+
+  const loadPix = useCallback(
+    async (signal: AbortSignal) => {
+      setIsProcessing(true);
+      setError(null);
+      try {
+        const response = await fetch("/api/syncpay", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "create-pix",
+            valor: price,
+            plano: product.name,
+          }),
+          signal,
+        });
+        const data = await response.json();
+        if (signal.aborted) return;
+        if (!response.ok) {
+          throw new Error(data.error || "Erro ao criar PIX");
+        }
+        setPixData(data as SyncPayPixResponse);
+        setPixStatus("created");
+      } catch (err: unknown) {
+        if (signal.aborted) return;
+        const msg = err instanceof Error ? err.message : "Erro ao processar pagamento";
+        setError(msg);
+        console.error("Erro ao criar PIX:", err);
+      } finally {
+        if (!signal.aborted) {
+          setIsProcessing(false);
+        }
+      }
+    },
+    [price, product.name],
+  );
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const ac = new AbortController();
+    void loadPix(ac.signal);
+    return () => ac.abort();
+  }, [isOpen, createAttempt, loadPix]);
 
   // Polling para verificar status do PIX
   useEffect(() => {
@@ -146,49 +189,6 @@ export default function PaymentModal({
     return () => clearInterval(interval);
   }, [pixData, pixStatus, product.entregavel, onClose, product.id, onPaymentConfirmed]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
-    if (paymentMethod !== "pix") {
-      setError("Por enquanto, apenas PIX está disponível");
-      return;
-    }
-
-    setIsProcessing(true);
-
-    try {
-      const valorEmReais = price;
-
-      // SyncPay - criar transação
-      const response = await fetch("/api/syncpay", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          action: "create-pix",
-          valor: valorEmReais,
-          plano: product.name
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Erro ao criar PIX");
-      }
-
-      setPixData(data);
-      setPixStatus("created");
-    } catch (err: any) {
-      setError(err.message || "Erro ao processar pagamento");
-      console.error("Erro ao criar PIX:", err);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
   const copyPixCode = () => {
     const pixCode = pixData?.pix_code;
     if (pixCode) {
@@ -222,56 +222,38 @@ export default function PaymentModal({
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           {!pixData ? (
-            <form onSubmit={handleSubmit} className="space-y-5 px-5 py-6">
-              <div>
-                <label className="mb-3 block text-sm font-semibold text-of-navy">Método de pagamento</label>
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod("pix")}
-                  className={`w-full rounded-xl border-2 p-4 text-left transition ${
-                    paymentMethod === "pix"
-                      ? "border-of-blue bg-sky-50/80"
-                      : "border-slate-200 bg-slate-50 hover:border-of-blue/40"
-                  }`}
-                  disabled={isProcessing}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
-                          paymentMethod === "pix" ? "border-of-blue bg-of-blue" : "border-slate-400"
-                        }`}
-                      >
-                        {paymentMethod === "pix" ? <span className="h-2 w-2 rounded-full bg-white" /> : null}
-                      </span>
-                      <span className="font-semibold text-of-navy">PIX</span>
-                    </div>
-                    <span className="text-xs text-of-muted">Pagamento instantâneo</span>
-                  </div>
-                </button>
-              </div>
-
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-of-muted">Total</span>
-                  <span className="text-xl font-bold text-of-navy">
-                    R$ {price.toFixed(2).replace(".", ",")}
-                  </span>
-                </div>
-              </div>
-
-              {error ? (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
-              ) : null}
-
-              <button
-                type="submit"
-                disabled={isProcessing}
-                className="w-full rounded-xl bg-of-blue py-3.5 text-base font-bold text-white shadow-md transition hover:bg-of-blue-deep disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isProcessing ? "Processando…" : "Gerar pagamento"}
-              </button>
-            </form>
+            <div className="flex min-h-[220px] flex-col items-center justify-center gap-5 px-5 py-10">
+              {error && !isProcessing ? (
+                <>
+                  <p className="max-w-xs text-center text-sm text-red-700">{error}</p>
+                  <button
+                    type="button"
+                    onClick={() => setCreateAttempt((n) => n + 1)}
+                    className="rounded-xl bg-of-blue px-6 py-3 text-sm font-bold text-white transition hover:bg-of-blue-deep"
+                  >
+                    Tentar novamente
+                  </button>
+                </>
+              ) : (
+                <>
+                  <svg
+                    className="h-10 w-10 animate-spin text-of-blue"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
+                  </svg>
+                  <p className="text-center text-sm font-medium text-of-muted">Gerando PIX…</p>
+                </>
+              )}
+            </div>
           ) : pixStatus === "paid" ? (
             <div className="space-y-5 px-5 py-8 text-center">
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-of-blue to-of-blue-deep text-3xl text-white shadow-lg">
