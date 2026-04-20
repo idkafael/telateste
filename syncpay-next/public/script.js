@@ -332,9 +332,13 @@ if (helpBtn) {
     });
 }
 
-function irParaPagamento(plano) {
-    var p = encodeURIComponent(plano || 'Mensal');
-    window.location.href = '/pagamento?plano=' + p;
+function abrirCheckoutModal(plano) {
+    var p = plano || 'Mensal';
+    if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: 'onlyfans-checkout', plano: p }, '*');
+    } else {
+        window.location.href = '/?plano=' + encodeURIComponent(p);
+    }
 }
 
 function initSubscriptionButtons() {
@@ -350,7 +354,7 @@ function initSubscriptionButtons() {
         if (el) {
             el.addEventListener('click', function (e) {
                 e.preventDefault();
-                irParaPagamento(pair[1]);
+                abrirCheckoutModal(pair[1]);
             });
         }
     });

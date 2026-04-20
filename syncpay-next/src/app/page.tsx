@@ -1,6 +1,6 @@
-import { redirect } from "next/navigation";
+import HomeWithPayment from "@/components/HomeWithPayment";
 
-/** Landing estática em /public/index.html — um único deploy (API + página). */
+/** Landing em /index.html dentro do iframe; modal PIX na mesma rota `/`. */
 export default function Home() {
-  redirect("/index.html");
+  return <HomeWithPayment />;
 }
