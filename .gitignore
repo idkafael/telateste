@@ -1,0 +1,14 @@
+# Secrets e ambiente local
+.env
+.env.local
+.env.*.local
+
+# Bancos / dados locais
+*.sqlite
+*.sqlite3
+*.db
+database.sqlite
+
+# Editor
+.DS_Store
+Thumbs.db

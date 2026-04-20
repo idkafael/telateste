@@ -1,0 +1,71 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum TransactionStatus {
+  pending
+  processing
+  paid
+  failed
+  cancelled
+}
+
+model Transaction {
+  id             String            @id @default(cuid())
+  provider       String
+  identifier     String            @unique
+  amountCents    Int
+  currency       String            @default("BRL")
+  description    String?
+  recode         String?
+  customerName   String
+  customerEmail  String
+  customerDoc    String?
+  status         TransactionStatus @default(pending)
+  pixCode        String?
+  qrCodeBase64   String?
+  rawProviderRef String? // TODO: CONFIRM WITH SYNCPAY DOC (some providers return extra refs)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  deliveries Delivery[]
+  events     ProcessedEvent[]
+
+  @@index([provider, status])
+}
+
+model Delivery {
+  id            String      @id @default(cuid())
+  transactionId String
+  type          String
+  content       String
+  createdAt     DateTime    @default(now())
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([transactionId])
+}
+
+model ProcessedEvent {
+  id            String   @id @default(cuid())
+  provider      String
+  transactionId String
+  eventKey      String
+  eventHash     String
+  receivedAt    DateTime @default(now())
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, eventKey])
+  @@index([transactionId])
+}
