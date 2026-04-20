@@ -12,8 +12,8 @@ const envSchema = z
     APP_BASE_URL: z.string().url(),
     LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
 
-    /** Origem da página estática (Live Server, etc.) para CORS */
-    FRONTEND_ORIGIN: z.string().url().default("http://127.0.0.1:5500"),
+    /** Uma ou mais origens (site estático), separadas por vírgula — para CORS */
+    FRONTEND_ORIGIN: z.string().min(1).default("http://127.0.0.1:5500"),
 
     SYNCPAY_MOCK: boolish,
 

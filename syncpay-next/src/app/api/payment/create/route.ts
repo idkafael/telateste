@@ -15,8 +15,8 @@ const createSchema = z.object({
   }),
 });
 
-export async function OPTIONS() {
-  return new Response(null, { status: 204, headers: corsHeaders() });
+export async function OPTIONS(req: Request) {
+  return new Response(null, { status: 204, headers: corsHeaders(req) });
 }
 
 export async function POST(req: Request) {
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const input = createSchema.parse(body);
     const out = await createPayment(input);
-    return withCors(NextResponse.json(out));
+    return withCors(NextResponse.json(out), req);
   } catch (err) {
     if (err instanceof z.ZodError) {
       return withCors(
@@ -32,6 +32,7 @@ export async function POST(req: Request) {
           { error: "Payload inválido", details: err.flatten().fieldErrors },
           { status: 400 },
         ),
+        req,
       );
     }
     return withCors(
@@ -39,6 +40,7 @@ export async function POST(req: Request) {
         { error: err instanceof Error ? err.message : "Unknown error" },
         { status: 400 },
       ),
+      req,
     );
   }
 }

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pagamento Confirmado - CarregadoStore</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: "Inter", sans-serif; }
+        .gradient-bg {
+            background: linear-gradient(135deg, #00b8ff 0%, #0095d4 50%, #00d9ff 100%);
+        }
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .success-checkmark {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: block;
+            stroke-width: 2;
+            stroke: #00b8ff;
+            stroke-miterlimit: 10;
+            margin: 0 auto;
+            box-shadow: inset 0px 0px 0px #00b8ff;
+            animation: fill 0.4s ease-in-out 0.4s forwards, scale 0.3s ease-in-out 0.9s both;
+        }
+        .success-checkmark circle {
+            stroke-dasharray: 166;
+            stroke-dashoffset: 166;
+            stroke-width: 2;
+            stroke-miterlimit: 10;
+            stroke: #00b8ff;
+            fill: none;
+            animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+        }
+        .success-checkmark path {
+            transform-origin: 50% 50%;
+            stroke-dasharray: 48;
+            stroke-dashoffset: 48;
+            animation: stroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.8s forwards;
+        }
+        @keyframes stroke {
+            100% { stroke-dashoffset: 0; }
+        }
+        @keyframes scale {
+            0%, 100% { transform: none; }
+            50% { transform: scale3d(1.1, 1.1, 1); }
+        }
+        @keyframes fill {
+            100% { box-shadow: inset 0px 0px 0px 30px #00b8ff; }
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden">
+        <!-- Header de Sucesso -->
+        <div class="bg-gradient-to-r from-blue-500 to-cyan-600 text-white p-8 text-center">
+            <div class="success-checkmark">
+                <svg width="80" height="80" viewBox="0 0 80 80">
+                    <circle cx="40" cy="40" r="38" fill="none"/>
+                    <path d="M20 40l12 12 28-28" fill="none"/>
+                </svg>
+            </div>
+            <h1 class="text-3xl font-bold mt-4 mb-2">Pagamento Confirmado!</h1>
+            <p class="text-blue-100">Obrigado por assinar o conteúdo da CarregadoStore</p>
+        </div>
+        
+        <!-- Conteúdo Principal -->
+        <div class="p-8">
+            <!-- Detalhes do Pagamento -->
+            <div class="bg-gray-50 rounded-xl p-6 mb-6">
+                <h3 class="font-bold text-gray-800 mb-4 text-center">Detalhes da Compra</h3>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Produto:</span>
+                        <span class="font-semibold">Acesso Vitalício</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Valor:</span>
+                        <span class="font-semibold text-blue-600">R$ 19,90</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Status:</span>
+                        <span class="font-semibold text-blue-600">✓ Pago</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">ID da Transação:</span>
+                        <span class="font-mono text-xs text-gray-500" id="transactionId">-</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Botão de Acesso ao Drive -->
+            <div class="mb-6 text-center">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">
+                    🎁 Acesse seus conteúdos agora!
+                </h3>
+                <p class="text-gray-600 mb-6">
+                    Seu pagamento foi confirmado. Clique no botão abaixo para acessar o conteúdo exclusivo.
+                </p>
+                
+                <button 
+                    onclick="abrirDrive()" 
+                    class="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-bold py-4 px-6 rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all transform hover:scale-105 pulse-animation text-lg"
+                >
+                    📥 Acessar Conteúdo no Drive
+                </button>
+            </div>
+            
+            <!-- Botão Voltar -->
+            <div class="text-center">
+                <button 
+                    onclick="voltarParaSite()" 
+                    class="text-gray-600 hover:text-gray-800 transition-colors underline"
+                >
+                    ← Voltar ao Site
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Facebook Pixel -->
+    <script>
+      !function(f,b,e,v,n,t,s)
+      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+      n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s)}(window, document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+      fbq('init', 'SEU_PIXEL_ID_AQUI'); // 🔴 SUBSTITUIR: Coloque seu Pixel ID aqui
+      fbq('track', 'PageView');
+    </script>
+    <noscript>
+      <img height="1" width="1" style="display:none"
+           src="https://www.facebook.com/tr?id=SEU_PIXEL_ID_AQUI&ev=PageView&noscript=1" /> // 🔴 SUBSTITUIR: Coloque seu Pixel ID aqui
+    </noscript>
+    <!-- End Facebook Pixel -->
+
+    <!-- Scripts -->
+    <script src="/js/database.js"></script>
+    <script src="/js/lead-tracking.js"></script>
+    <script src="/js/facebook-pixel.js"></script>
+    
+    <script>
+        // Link deeplink do Drive (substitua pelo seu link real)
+        const DRIVE_DEEPLINK = 'https://drive.google.com/drive/folders/SEU_ID_DO_DRIVE?usp=sharing';
+        // Obter dados da URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const transactionId = urlParams.get('id') || 'N/A';
+        const valor = urlParams.get('valor') || '19,90';
+        const status = urlParams.get('status') || 'paid';
+        const linkEntrega = urlParams.get('link');
+        
+        // Evento Facebook Pixel - Purchase
+        if (typeof fbq !== 'undefined') {
+          fbq('track', 'Purchase', {
+            value: 19.90,
+            currency: 'BRL',
+            content_name: 'Curso Privacy',
+            content_category: 'Digital Product',
+            transaction_id: transactionId
+          });
+        }
+        
+        // Exibir ID da transação
+        document.getElementById('transactionId').textContent = transactionId;
+        
+        // Função para abrir o Drive
+        function abrirDrive() {
+            window.open(linkEntrega || DRIVE_DEEPLINK, '_blank');
+        }
+        
+        // Função para voltar ao site
+        function voltarParaSite() {
+            window.location.href = '/';
+        }
+        
+        // Animação de entrada
+        document.addEventListener('DOMContentLoaded', function() {
+            const card = document.querySelector('.bg-white');
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(50px)';
+            
+            setTimeout(() => {
+                card.style.transition = 'all 0.6s ease-out';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, 100);
+        });
+    </script>
+</body>
+</html>

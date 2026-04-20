@@ -3,8 +3,8 @@ import { z } from "zod";
 import { buildStatusResponse, refreshTransactionFromProvider } from "@/lib/payment/transactions";
 import { corsHeaders, withCors } from "@/lib/cors";
 
-export async function OPTIONS() {
-  return new Response(null, { status: 204, headers: corsHeaders() });
+export async function OPTIONS(req: Request) {
+  return new Response(null, { status: 204, headers: corsHeaders(req) });
 }
 
 export async function GET(req: Request) {
@@ -17,17 +17,18 @@ export async function GET(req: Request) {
     const refreshed = await refreshTransactionFromProvider(identifier).catch(() => null);
     if (refreshed && ["paid", "failed", "cancelled"].includes(refreshed.status)) {
       const payload = await buildStatusResponse(identifier);
-      return withCors(NextResponse.json(payload));
+      return withCors(NextResponse.json(payload), req);
     }
 
     const payload = await buildStatusResponse(identifier);
-    return withCors(NextResponse.json(payload));
+    return withCors(NextResponse.json(payload), req);
   } catch (err) {
     return withCors(
       NextResponse.json(
         { error: err instanceof Error ? err.message : "Unknown error" },
         { status: 400 },
       ),
+      req,
     );
   }
 }

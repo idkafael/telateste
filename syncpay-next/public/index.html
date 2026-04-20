@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<!-- Deploy único (Next + esta pasta public): API = mesma origem; não precisa preencher payment-api-base. -->
+<html lang="pt-BR" data-payment-api-same-origin>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- OBRIGATÓRIO na Vercel: substitua content pela URL HTTPS do projeto Next (syncpay-next), igual APP_BASE_URL. Sem isso o site chama localhost e dá CORS. -->
     <meta name="payment-api-base" content="">
     <title>Larissa Farias - Perfil</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -372,6 +372,6 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="/script.js"></script>
 </body>
 </html>
