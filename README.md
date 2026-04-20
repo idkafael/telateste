@@ -5,6 +5,12 @@
 
 Sistema completo de vendas estilo OnlyFans com pagamento PIX via PushinPay.
 
+## Vercel (Next + landing em um deploy)
+
+- Toda a aplicação que precisa de **`/api/*`** está em **`syncpay-next/`** (landing em **`syncpay-next/public/`**).
+- No painel do projeto: **Settings → General → Root Directory** = **`syncpay-next`** (exatamente essa pasta).
+- Se o **Root Directory** for a raiz do repositório e existir **`index.html` na raiz**, a Vercel pode tratar o projeto como **site estático**: a página abre, mas **`POST /api/payment/create` dá 404**. Por isso a landing duplicada na raiz foi removida; use só a cópia em `syncpay-next/public/`.
+
 ---
 
 ## ⚡ INÍCIO RÁPIDO
@@ -24,7 +30,8 @@ const CHAT_ID = 'SEU_CHAT_ID';
 
 ### 2. Abra no navegador
 ```bash
-index.html
+cd syncpay-next && npm run dev
+# depois: http://localhost:3000/  (redireciona para a landing em public/)
 ```
 
 ### 3. Teste
