@@ -5,9 +5,13 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        "purple-primary": "#a855f7",
-        "dark-card": "#1a1a1e",
-        "dark-border": "#2d2d33",
+        /* Alinhado à landing (styles.css --primary-blue / gradientes) */
+        "of-blue": "#00b8ff",
+        "of-blue-deep": "#0095d4",
+        "of-navy": "#0f172a",
+        "of-muted": "#64748b",
+        "of-hint": "#e0f2fe",
+        "of-hint-border": "#bae6fd",
       },
     },
   },

@@ -200,166 +200,163 @@ export default function PaymentModal({
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-      <div className="bg-dark-card border border-dark-border rounded-lg w-full max-w-md p-6 space-y-6 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-white">Pagamento</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
-          >
-            ✕
-          </button>
-        </div>
+  const pixCode = pixData?.pix_code;
+  const qrCodeUrl = pixCode
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encodeURIComponent(pixCode)}`
+    : null;
 
-        {!pixData ? (
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Método de Pagamento - Card Selecionável */}
-            <div>
-              <label className="block text-white font-medium mb-3">
-                Método de Pagamento
-              </label>
-              <div className="space-y-2">
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 p-4 backdrop-blur-[2px]">
+      <div className="flex max-h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-2xl">
+        <header className="flex shrink-0 items-center justify-between gap-3 bg-gradient-to-r from-of-blue to-of-blue-deep px-5 py-4">
+          <h2 className="text-lg font-bold tracking-tight text-white">Pagamento PIX</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md px-2 py-1 text-2xl leading-none text-white/90 transition hover:bg-white/10 hover:text-white"
+            aria-label="Fechar"
+          >
+            ×
+          </button>
+        </header>
+
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {!pixData ? (
+            <form onSubmit={handleSubmit} className="space-y-5 px-5 py-6">
+              <div>
+                <label className="mb-3 block text-sm font-semibold text-of-navy">Método de pagamento</label>
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("pix")}
-                  className={`w-full p-4 rounded-lg border-2 transition-all ${
+                  className={`w-full rounded-xl border-2 p-4 text-left transition ${
                     paymentMethod === "pix"
-                      ? "border-purple-primary bg-purple-primary/10"
-                      : "border-dark-border bg-black/50 hover:border-purple-primary/50"
+                      ? "border-of-blue bg-sky-50/80"
+                      : "border-slate-200 bg-slate-50 hover:border-of-blue/40"
                   }`}
                   disabled={isProcessing}
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                        paymentMethod === "pix"
-                          ? "border-purple-primary bg-purple-primary"
-                          : "border-gray-500"
-                      }`}>
-                        {paymentMethod === "pix" && (
-                          <div className="w-2 h-2 rounded-full bg-white"></div>
-                        )}
-                      </div>
-                      <span className="text-white font-medium">PIX</span>
+                      <span
+                        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
+                          paymentMethod === "pix" ? "border-of-blue bg-of-blue" : "border-slate-400"
+                        }`}
+                      >
+                        {paymentMethod === "pix" ? <span className="h-2 w-2 rounded-full bg-white" /> : null}
+                      </span>
+                      <span className="font-semibold text-of-navy">PIX</span>
                     </div>
-                    <span className="text-gray-400 text-sm">Pagamento instantâneo</span>
+                    <span className="text-xs text-of-muted">Pagamento instantâneo</span>
                   </div>
                 </button>
               </div>
-            </div>
 
-            {/* Total */}
-            <div className="bg-dark-border/30 rounded-lg p-4 border border-dark-border">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-300">Total</span>
-                <span className="text-2xl text-purple-primary font-bold">
-                  R$ {price.toFixed(2).replace(".", ",")}
-                </span>
-              </div>
-            </div>
-
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-red-400 text-sm">
-                {error}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={isProcessing}
-              className="w-full bg-purple-primary hover:bg-purple-primary/80 text-white font-bold py-4 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-lg"
-            >
-              {isProcessing ? "Processando..." : "Gerar Pagamento"}
-            </button>
-          </form>
-        ) : pixStatus === "paid" ? (
-          <div className="text-center space-y-4">
-            <div className="text-green-500 text-4xl mb-4">✓</div>
-            <h3 className="text-2xl font-bold text-white">Pagamento Confirmado!</h3>
-            <p className="text-gray-300">Obrigado pela compra!</p>
-            <p className="text-gray-400 text-sm">O conteúdo foi aberto automaticamente.</p>
-            <button
-              onClick={onClose}
-              className="w-full bg-purple-primary hover:bg-purple-primary/80 text-white font-bold py-3 px-6 rounded-lg transition-colors"
-            >
-              Fechar
-            </button>
-          </div>
-        ) : (
-          <>
-            <div className="text-center">
-              <p className="text-white font-medium mb-2">Escaneie o QR Code ou copie o código PIX</p>
-              <p className="text-gray-400 text-sm mb-4">
-                Valor: <span className="text-purple-primary font-bold">R$ {price.toFixed(2).replace(".", ",")}</span>
-              </p>
-              <p className="text-xs text-gray-500 mt-2">
-                💡 Após pagar, aguarde alguns segundos para confirmação automática
-              </p>
-            </div>
-
-            {/* Gerar QR code a partir do código PIX copiável */}
-            {(() => {
-              const pixCode = pixData.pix_code;
-              
-              if (!pixCode) return null;
-              
-              // Gerar QR code a partir do código PIX usando api.qrserver.com
-              const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encodeURIComponent(pixCode)}`;
-              
-              return (
-                <div className="flex justify-center bg-white p-4 rounded-lg">
-                  <img
-                    src={qrCodeUrl}
-                    alt="QR Code PIX"
-                    className="w-64 h-64 object-contain"
-                    onError={(e) => {
-                      console.error('Erro ao carregar QR code:', qrCodeUrl);
-                    }}
-                  />
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-of-muted">Total</span>
+                  <span className="text-xl font-bold text-of-navy">
+                    R$ {price.toFixed(2).replace(".", ",")}
+                  </span>
                 </div>
-              );
-            })()}
+              </div>
 
-            <div className="space-y-2">
-              <label className="block text-white font-medium text-sm">
-                Código PIX (copiar e colar)
-              </label>
-              <div className="flex gap-2">
+              {error ? (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
+              ) : null}
+
+              <button
+                type="submit"
+                disabled={isProcessing}
+                className="w-full rounded-xl bg-of-blue py-3.5 text-base font-bold text-white shadow-md transition hover:bg-of-blue-deep disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isProcessing ? "Processando…" : "Gerar pagamento"}
+              </button>
+            </form>
+          ) : pixStatus === "paid" ? (
+            <div className="space-y-5 px-5 py-8 text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-of-blue to-of-blue-deep text-3xl text-white shadow-lg">
+                ✓
+              </div>
+              <h3 className="text-xl font-bold text-of-navy">Pagamento confirmado!</h3>
+              <p className="text-sm text-of-muted">Obrigado pela compra. O conteúdo foi aberto em nova aba, se configurado.</p>
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full rounded-xl bg-of-blue py-3 font-bold text-white transition hover:bg-of-blue-deep"
+              >
+                Fechar
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-5 px-5 py-6">
+              <p className="text-center text-sm font-semibold text-of-blue-deep">QR Code gerado com sucesso!</p>
+              <p className="text-center text-base font-bold text-of-navy">Escaneie o QR Code</p>
+
+              {qrCodeUrl ? (
+                <div className="flex justify-center rounded-xl border border-slate-200 bg-white p-4">
+                  <img src={qrCodeUrl} alt="QR Code PIX" className="h-64 w-64 object-contain" />
+                </div>
+              ) : null}
+
+              <div className="space-y-2">
+                <label className="block text-left text-sm font-bold text-of-navy">Ou copie o código PIX</label>
                 <input
                   type="text"
-                  value={pixData.pix_code || ''}
+                  value={pixData.pix_code || ""}
                   readOnly
-                  className="flex-1 bg-black border border-dark-border rounded px-4 py-2 text-white text-xs font-mono break-all"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-3 font-mono text-xs leading-relaxed text-of-navy"
                 />
                 <button
+                  type="button"
                   onClick={copyPixCode}
-                  className="bg-purple-primary hover:bg-purple-primary/80 text-white px-4 py-2 rounded transition-colors whitespace-nowrap"
+                  className="w-full rounded-xl bg-of-blue py-3.5 text-center text-base font-bold text-white shadow transition hover:bg-of-blue-deep"
                 >
-                  {copied ? "✓ Copiado" : "Copiar"}
+                  {copied ? "✓ Copiado" : "Copiar código PIX"}
                 </button>
               </div>
-            </div>
 
-            {pixStatus === "created" && (
-              <div className="text-center">
-                <div className="flex items-center justify-center space-x-2 text-orange-400">
-                  <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                  </svg>
-                  <span className="text-sm">Aguardando pagamento...</span>
+              <div className="rounded-xl border border-of-hint-border bg-of-hint px-4 py-3 text-sm text-slate-800">
+                <div className="mb-2 flex items-center gap-2 font-semibold text-of-navy">
+                  <span
+                    className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-of-blue-deep text-xs font-bold text-white"
+                    aria-hidden
+                  >
+                    i
+                  </span>
+                  Instruções
                 </div>
+                <ul className="list-disc space-y-1.5 pl-5 text-slate-700">
+                  <li>Escaneie o QR Code com seu app bancário</li>
+                  <li>Ou copie e cole o código PIX</li>
+                  <li>O pagamento será confirmado automaticamente</li>
+                </ul>
               </div>
-            )}
 
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/30 rounded p-3 text-red-400 text-sm">
-                {error}
+              {pixStatus === "created" ? (
+                <div className="flex items-center justify-center gap-2 text-sm text-of-blue-deep">
+                  <svg className="h-5 w-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
+                  </svg>
+                  <span>Aguardando confirmação do pagamento…</span>
+                </div>
+              ) : null}
+
+              {error ? (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
+              ) : null}
+
+              <div className="border-t border-slate-200 pt-5 text-center">
+                <p className="text-2xl font-bold text-of-navy">R$ {price.toFixed(2).replace(".", ",")}</p>
+                <p className="mt-1 text-sm text-of-muted">{product.name}</p>
               </div>
-            )}
-          </>
-        )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
