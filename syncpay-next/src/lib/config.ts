@@ -5,6 +5,23 @@ const boolish = z
   .optional()
   .transform((v) => v === "1" || v?.toLowerCase() === "true");
 
+/** Fase de `next build` (Next define NEXT_PHASE) ou `npm run build` na Vercel sem DATABASE_URL ainda injetado em alguns passos. */
+const isNextProductionBuild = process.env.NEXT_PHASE === "phase-production-build";
+const isNpmBuildScript = process.env.npm_lifecycle_event === "build";
+
+function useBuildPlaceholders() {
+  if (process.env.DATABASE_URL?.trim()) return false;
+  return isNextProductionBuild || (isNpmBuildScript && process.env.VERCEL === "1");
+}
+
+function buildPlaceholderDbUrl() {
+  return "file:./.next/build-placeholder.sqlite";
+}
+
+function buildPlaceholderAppUrl() {
+  return "https://build-placeholder.invalid";
+}
+
 const envSchema = z
   .object({
     DATABASE_URL: z.string().min(1),
@@ -29,6 +46,7 @@ const envSchema = z
     SYNCPAY_WEBHOOK_SIGNATURE_SECRET: z.string().min(1).optional(),
   })
   .superRefine((data, ctx) => {
+    if (isNextProductionBuild || (isNpmBuildScript && process.env.VERCEL === "1")) return;
     if (!data.SYNCPAY_MOCK) {
       if (!data.SYNCPAY_BASE_URL) {
         ctx.addIssue({ code: "custom", message: "SYNCPAY_BASE_URL obrigatório quando SYNCPAY_MOCK não está ativo" });
@@ -43,7 +61,6 @@ const envSchema = z
   })
   .transform((data) => ({
     ...data,
-    // Satisfaz TypeScript em client HTTP; em SYNCPAY_MOCK as chamadas externas não são usadas.
     SYNCPAY_BASE_URL: data.SYNCPAY_BASE_URL ?? "http://localhost",
     SYNCPAY_CLIENT_ID: data.SYNCPAY_CLIENT_ID ?? "",
     SYNCPAY_CLIENT_SECRET: data.SYNCPAY_CLIENT_SECRET ?? "",
@@ -51,9 +68,13 @@ const envSchema = z
     SYNCPAY_DEFAULT_CLIENT_PHONE: data.SYNCPAY_DEFAULT_CLIENT_PHONE,
   }));
 
+const rawDatabaseUrl = process.env.DATABASE_URL?.trim();
+const rawAppBaseUrl = process.env.APP_BASE_URL?.trim();
+const placeholders = useBuildPlaceholders();
+
 export const env = envSchema.parse({
-  DATABASE_URL: process.env.DATABASE_URL,
-  APP_BASE_URL: process.env.APP_BASE_URL,
+  DATABASE_URL: rawDatabaseUrl || (placeholders ? buildPlaceholderDbUrl() : ""),
+  APP_BASE_URL: rawAppBaseUrl || (placeholders ? buildPlaceholderAppUrl() : ""),
   LOG_LEVEL: process.env.LOG_LEVEL ?? "info",
   FRONTEND_ORIGIN: process.env.FRONTEND_ORIGIN,
   SYNCPAY_MOCK: process.env.SYNCPAY_MOCK,
@@ -65,4 +86,3 @@ export const env = envSchema.parse({
   SYNCPAY_WEBHOOK_TOKEN: process.env.SYNCPAY_WEBHOOK_TOKEN,
   SYNCPAY_WEBHOOK_SIGNATURE_SECRET: process.env.SYNCPAY_WEBHOOK_SIGNATURE_SECRET,
 });
-
