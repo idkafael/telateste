@@ -1,22 +1,3 @@
-// ============================================
-// CONFIGURAÇÃO DO LINK DE ENTREGA
-// ============================================
-// Altere o link abaixo para o seu produto/conteúdo
-const DELIVERY_CONFIG = {
-    // Link padrão para todos os planos
-    defaultLink: 'https://www.example.com/seu-conteudo',
-    
-    // Ou links diferentes por plano (opcional)
-    planLinks: {
-        'Mensal': 'https://www.example.com/mensal',
-        'Trimestral': 'https://www.example.com/trimestral',
-        'Anual': 'https://www.example.com/anual'
-    },
-    
-    // Usar links específicos por plano? (true/false)
-    usePlanSpecificLinks: false
-};
-
 // Toggle de pacotes de assinatura
 document.addEventListener('DOMContentLoaded', function() {
     const packageToggle = document.querySelector('.package-toggle');
@@ -267,11 +248,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Sistema de desbloqueio de conteúdo
-    const unlockBtn = document.getElementById('unlockBtn');
-    const lockOverlay = document.getElementById('lockOverlay');
-    const previewVideo = document.getElementById('previewVideo');
-    
+    // Área bloqueada: prévia em vídeo
     // Garante que o vídeo carregue e comece a tocar
     const videoElement = document.querySelector('.preview-video video');
     if (videoElement) {
@@ -314,8 +291,6 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Vídeo está tocando!');
         });
     }
-    
-    // Desbloqueio do conteúdo só após pagamento confirmado (ver irParaAgradecimentoComEntrega)
 });
 
 // Função para formatar números
@@ -357,403 +332,31 @@ if (helpBtn) {
     });
 }
 
-// ============================================
-// PAGAMENTO PIX — só requisições HTTP (sem página de checkout)
-// POST /api/payment/create + polling GET /api/payment/status no modal abaixo
-// ============================================
-function getPaymentApiBaseUrl() {
-    if (typeof window === 'undefined') return 'http://localhost:3000';
-    const fromWindow = window.PAYMENT_API_BASE_URL;
-    if (typeof fromWindow === 'string' && fromWindow.trim()) {
-        return fromWindow.trim().replace(/\/$/, '');
-    }
-    if (typeof document !== 'undefined') {
-        const meta = document.querySelector('meta[name="payment-api-base"]');
-        const c = meta && meta.getAttribute('content');
-        if (typeof c === 'string' && c.trim()) return c.trim().replace(/\/$/, '');
-        /** Landing servida pelo mesmo Next (ex.: arquivos em /public) — usa a origem atual; envs da Vercel já valem no servidor. */
-        if (document.documentElement.hasAttribute('data-payment-api-same-origin') && typeof location !== 'undefined') {
-            return location.origin.replace(/\/$/, '');
-        }
-    }
-    const fallback = 'http://localhost:3000';
-    if (typeof location !== 'undefined' && location.protocol === 'https:' && fallback.startsWith('http://localhost')) {
-        console.error(
-            '[PIX] Defina no index.html: <meta name="payment-api-base" content="https://URL-DO-SEU-NEXT-NA-VERCEL" /> (igual APP_BASE_URL).'
-        );
-    }
-    return fallback;
+function irParaPagamento(plano) {
+    var p = encodeURIComponent(plano || 'Mensal');
+    window.location.href = '/pagamento?plano=' + p;
 }
 
-// URL do servidor Next (syncpay-next): meta payment-api-base no index.html ou window.PAYMENT_API_BASE_URL
-const PAYMENT_API = {
-    get baseUrl() {
-        return getPaymentApiBaseUrl();
-    },
-    /** Dados do comprador — SyncPay exige client.cpf (11) e client.phone (10–11) */
-    customer: {
-        name: 'Cliente',
-        email: 'cliente@localhost.test',
-        document: '52998224725',
-        phone: '11999999999'
-    }
-};
-
-const PLANOS = {
-    'Mensal': { preco: 19.90, amountCents: 1990, duracao: '1 mês', dias: 31 },
-    'Trimestral': { preco: 50.00, amountCents: 5000, duracao: '3 meses', dias: 90 },
-    'Anual': { preco: 99.90, amountCents: 9990, duracao: '12 meses', dias: 365 }
-};
-
-let timerInterval = null;
-let statusPollInterval = null;
-let pagamentoIdentifierAtual = null;
-
-function pararPollingStatus() {
-    if (statusPollInterval) {
-        clearInterval(statusPollInterval);
-        statusPollInterval = null;
-    }
-}
-
-function resetModalPixLoading() {
-    const qrContainer = document.getElementById('qrCode');
-    if (qrContainer) {
-        qrContainer.innerHTML = `
-            <div class="loading-qr">
-                <i class="fas fa-spinner fa-spin"></i>
-                <p>Gerando QR Code...</p>
-            </div>
-        `;
-    }
-    const pixInput = document.getElementById('pixCodeInput');
-    if (pixInput) pixInput.value = '';
-    const statusDiv = document.getElementById('paymentStatus');
-    if (statusDiv) {
-        statusDiv.innerHTML = '<i class="fas fa-clock"></i><span>Aguardando pagamento...</span>';
-    }
-}
-
-function exibirQrCodeNoModal(base64OuDataUrl) {
-    const qrContainer = document.getElementById('qrCode');
-    if (!qrContainer || !base64OuDataUrl) return;
-    const src = base64OuDataUrl.startsWith('data:')
-        ? base64OuDataUrl
-        : `data:image/png;base64,${base64OuDataUrl}`;
-    qrContainer.innerHTML = `<img src="${src}" alt="QR Code PIX" style="max-width:240px;height:auto;display:block;margin:0 auto;" />`;
-}
-
-function exibirCodigoPixInput(codigo) {
-    const input = document.getElementById('pixCodeInput');
-    if (input) input.value = codigo || '';
-}
-
-// Abrir modal de pagamento
-function openPaymentModal(planName) {
-    const plano = PLANOS[planName];
-    const modal = document.getElementById('paymentModal');
-    const planInfo = document.getElementById('paymentPlanInfo');
-    const modalContent = modal.querySelector('.payment-modal-content');
-
-    window.__planoPagamentoAtual = planName;
-
-    planInfo.textContent = `${plano.duracao} - R$ ${plano.preco.toFixed(2).replace('.', ',')}`;
-
-    modal.classList.add('active');
-    document.body.style.overflow = 'hidden';
-
-    pararPollingStatus();
-    pagamentoIdentifierAtual = null;
-    resetModalPixLoading();
-
-    if (modalContent) {
-        modalContent.addEventListener('scroll', handleModalScroll);
-        setTimeout(() => handleModalScroll.call(modalContent), 100);
-    }
-
-    criarPixPagamento();
-    iniciarTimer(900);
-}
-
-// Detectar scroll no modal
-function handleModalScroll() {
-    if (this.scrollTop > 20) {
-        this.classList.add('has-scroll');
-    } else {
-        this.classList.remove('has-scroll');
-    }
-}
-
-// Fechar modal de pagamento
-function closePaymentModal() {
-    const modal = document.getElementById('paymentModal');
-    const modalContent = modal.querySelector('.payment-modal-content');
-    
-    modal.classList.remove('active');
-    document.body.style.overflow = '';
-    
-    // Remover listener de scroll
-    if (modalContent) {
-        modalContent.removeEventListener('scroll', handleModalScroll);
-        modalContent.classList.remove('has-scroll');
-    }
-    
-    pararPollingStatus();
-    if (timerInterval) {
-        clearInterval(timerInterval);
-    }
-}
-
-function isLocalApiUrl(url) {
-    try {
-        const u = new URL(String(url));
-        return u.hostname === 'localhost' || u.hostname === '127.0.0.1';
-    } catch {
-        return false;
-    }
-}
-
-async function criarPixPagamento() {
-    try {
-        const planName = window.__planoPagamentoAtual || 'Mensal';
-        const plano = PLANOS[planName];
-        if (!plano) throw new Error('Plano inválido');
-
-        resetModalPixLoading();
-
-        const apiBase = PAYMENT_API.baseUrl;
-        if (typeof location !== 'undefined' && location.protocol === 'https:' && isLocalApiUrl(apiBase)) {
-            throw new Error(
-                'A landing está em HTTPS mas a API aponta para localhost. ' +
-                    'No index.html, preencha: <meta name="payment-api-base" content="https://URL-DO-SEU-NEXT-NA-VERCEL" /> ' +
-                    '(a mesma URL de APP_BASE_URL). Variáveis SYNCPAY_DEFAULT_CLIENT_* só afetam CPF/telefone no servidor, não este endereço.'
-            );
-        }
-
-        const res = await fetch(`${apiBase}/api/payment/create`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                amountCents: plano.amountCents,
-                description: `Assinatura — ${plano.duracao}`,
-                recode: planName,
-                customer: PAYMENT_API.customer
-            })
-        });
-
-        const rawText = await res.text();
-        let dados = {};
-        try {
-            dados = rawText ? JSON.parse(rawText) : {};
-        } catch {
-            throw new Error(rawText || ('HTTP ' + res.status));
-        }
-        if (!res.ok || dados.error) {
-            const det = dados.details ? ' ' + JSON.stringify(dados.details) : '';
-            throw new Error((dados.error || 'Falha ao criar cobrança') + det);
-        }
-
-        pagamentoIdentifierAtual = dados.identifier;
-        exibirCodigoPixInput(dados.pixCode);
-        if (dados.qrCodeBase64) {
-            exibirQrCodeNoModal(dados.qrCodeBase64);
-        }
-
-        iniciarPollingStatusPagamento();
-    } catch (error) {
-        console.error('Erro ao criar PIX:', error);
-        
-        // Mostrar erro no modal
-        const qrContainer = document.getElementById('qrCode');
-        qrContainer.innerHTML = `
-            <div class="error-message">
-                <i class="fas fa-exclamation-triangle"></i>
-                <p>Erro ao gerar QR Code</p>
-                <p class="error-details">${error.message}</p>
-                <button onclick="criarPixPagamento()" class="retry-btn">Tentar Novamente</button>
-            </div>
-        `;
-    }
-}
-
-function iniciarPollingStatusPagamento() {
-    pararPollingStatus();
-    if (!pagamentoIdentifierAtual) return;
-
-    const tick = async () => {
-        try {
-            const res = await fetch(
-                `${PAYMENT_API.baseUrl}/api/payment/status?identifier=${encodeURIComponent(pagamentoIdentifierAtual)}`
-            );
-            const data = await res.json();
-            if (!res.ok || data.error) return;
-
-            if (data.status === 'paid' && data.delivery) {
-                pararPollingStatus();
-                irParaAgradecimentoComEntrega(data);
-            }
-        } catch (e) {
-            console.warn('Polling status:', e);
-        }
-    };
-
-    tick();
-    statusPollInterval = setInterval(tick, 3000);
-}
-
-function irParaAgradecimentoComEntrega(statusPayload) {
-    const planName = window.__planoPagamentoAtual || 'Mensal';
-    const plano = PLANOS[planName];
-    const valorStr = plano
-        ? plano.preco.toFixed(2).replace('.', ',')
-        : ((statusPayload.amountCents || 0) / 100).toFixed(2).replace('.', ',');
-
-    const linkEntrega =
-        (statusPayload.delivery && statusPayload.delivery.content) ||
-        (DELIVERY_CONFIG.usePlanSpecificLinks
-            ? DELIVERY_CONFIG.planLinks[planName]
-            : DELIVERY_CONFIG.defaultLink);
-
-    closePaymentModal();
-
-    const params = new URLSearchParams({
-        id: statusPayload.identifier || pagamentoIdentifierAtual || '',
-        valor: valorStr,
-        plano: planName,
-        status: 'paid',
-        timestamp: new Date().toISOString(),
-        link: linkEntrega
-    });
-
-    window.location.href = `/agradecimento.html?${params.toString()}`;
-}
-
-// Timer de expiração
-function iniciarTimer(segundos) {
-    let tempoRestante = segundos;
-    const timerDisplay = document.getElementById('timerDisplay');
-    
-    if (timerInterval) {
-        clearInterval(timerInterval);
-    }
-    
-    timerInterval = setInterval(() => {
-        tempoRestante--;
-        
-        const minutos = Math.floor(tempoRestante / 60);
-        const segs = tempoRestante % 60;
-        timerDisplay.textContent = `${minutos}:${segs.toString().padStart(2, '0')}`;
-        
-        if (tempoRestante <= 0) {
-            clearInterval(timerInterval);
-            pixExpirado();
-        }
-    }, 1000);
-}
-
-// PIX expirado
-function pixExpirado() {
-    const statusDiv = document.getElementById('paymentStatus');
-    statusDiv.innerHTML = `
-        <i class="fas fa-times-circle" style="color: #ff4444;"></i>
-        <span style="color: #ff4444;">PIX expirado. Gere um novo.</span>
-    `;
-    
-    // Mostrar botão para gerar novo PIX
-    const qrContainer = document.getElementById('qrCode');
-    qrContainer.innerHTML = `
-        <div class="expired-message">
-            <i class="fas fa-clock"></i>
-            <p>QR Code expirado</p>
-            <button onclick="criarPixPagamento()" class="retry-btn">Gerar Novo PIX</button>
-        </div>
-    `;
-}
-
-// Copiar código PIX
-function copiarCodigoPix() {
-    const input = document.getElementById('pixCodeInput');
-    input.select();
-    document.execCommand('copy');
-    
-    const btn = document.getElementById('copyPixBtn');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-check"></i> Copiado!';
-    btn.style.backgroundColor = '#4ade80';
-    
-    setTimeout(() => {
-        btn.innerHTML = originalText;
-        btn.style.backgroundColor = '';
-    }, 2000);
-}
-
-// Inicializar botões de assinatura
 function initSubscriptionButtons() {
-    // Botão Mensal - Main
-    const monthlyBtn = document.getElementById('subscribeMonthly');
-    if (monthlyBtn) {
-        monthlyBtn.addEventListener('click', function() {
-            openPaymentModal('Mensal');
-        });
-    }
-    
-    // Botão Trimestral
-    const quarterlyBtn = document.getElementById('subscribeQuarterly');
-    if (quarterlyBtn) {
-        quarterlyBtn.addEventListener('click', function() {
-            openPaymentModal('Trimestral');
-        });
-    }
-    
-    // Botão Anual
-    const yearlyBtn = document.getElementById('subscribeYearly');
-    if (yearlyBtn) {
-        yearlyBtn.addEventListener('click', function() {
-            openPaymentModal('Anual');
-        });
-    }
-    
-    // Botão Sidebar
-    const sidebarBtn = document.getElementById('subscribeSidebar');
-    if (sidebarBtn) {
-        sidebarBtn.addEventListener('click', function() {
-            openPaymentModal('Mensal');
-        });
-    }
-    
-    // Botão "INSCREVE-TE" da área bloqueada
-    const unlockBtn = document.getElementById('unlockBtn');
-    if (unlockBtn) {
-        unlockBtn.addEventListener('click', function() {
-            openPaymentModal('Mensal');
-        });
-    }
-    
-    // Botão de fechar modal
-    const closeBtn = document.getElementById('closeModal');
-    if (closeBtn) {
-        closeBtn.addEventListener('click', closePaymentModal);
-    }
-    
-    // Botão de copiar código PIX
-    const copyBtn = document.getElementById('copyPixBtn');
-    if (copyBtn) {
-        copyBtn.addEventListener('click', copiarCodigoPix);
-    }
-    
-    // Clicar fora do modal para fechar
-    const modal = document.getElementById('paymentModal');
-    if (modal) {
-        modal.addEventListener('click', function(e) {
-            if (e.target === modal) {
-                closePaymentModal();
-            }
-        });
-    }
+    var map = [
+        ['subscribeMonthly', 'Mensal'],
+        ['subscribeQuarterly', 'Trimestral'],
+        ['subscribeYearly', 'Anual'],
+        ['subscribeSidebar', 'Mensal'],
+        ['unlockBtn', 'Mensal']
+    ];
+    map.forEach(function (pair) {
+        var el = document.getElementById(pair[0]);
+        if (el) {
+            el.addEventListener('click', function (e) {
+                e.preventDefault();
+                irParaPagamento(pair[1]);
+            });
+        }
+    });
 }
 
-// Inicializar quando a página carregar
-window.addEventListener('load', function() {
+window.addEventListener('load', function () {
     initSubscriptionButtons();
 });
 

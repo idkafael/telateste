@@ -1,10 +1,8 @@
 <!DOCTYPE html>
-<!-- Deploy único (Next + esta pasta public): API = mesma origem; não precisa preencher payment-api-base. -->
-<html lang="pt-BR" data-payment-api-same-origin>
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="payment-api-base" content="">
     <title>Larissa Farias - Perfil</title>
     <link rel="stylesheet" href="/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -323,54 +321,6 @@
     <button class="help-btn">
         <i class="fas fa-question-circle"></i>
     </button>
-
-    <!-- Modal de Pagamento PIX -->
-    <div id="paymentModal" class="payment-modal">
-        <div class="payment-modal-content">
-            <button class="payment-modal-close" id="closeModal">&times;</button>
-            <h2>Escolha seu plano</h2>
-            <p class="payment-plan-info" id="paymentPlanInfo"></p>
-            
-            <!-- Informações do PIX -->
-            <div class="pix-container">
-                <div class="pix-info">
-                    <h3>💰 PIX - Pagamento Instantâneo</h3>
-                    <p>Pague com PIX e tenha acesso imediato!</p>
-                </div>
-                
-                <!-- QR Code -->
-                <div id="qrCode" class="qr-code-container">
-                    <div class="loading-qr">
-                        <i class="fas fa-spinner fa-spin"></i>
-                        <p>Gerando QR Code...</p>
-                    </div>
-                </div>
-                
-                <!-- Código PIX -->
-                <div class="pix-code-section">
-                    <label>Ou copie o código PIX:</label>
-                    <div class="pix-code-wrapper">
-                        <input type="text" id="pixCodeInput" readonly>
-                        <button id="copyPixBtn" class="copy-btn">
-                            <i class="fas fa-copy"></i> Copiar
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Status do Pagamento -->
-                <div id="paymentStatus" class="payment-status">
-                    <i class="fas fa-clock"></i>
-                    <span>Aguardando pagamento...</span>
-                </div>
-                
-                <!-- Timer -->
-                <div class="payment-timer">
-                    <i class="fas fa-hourglass-half"></i>
-                    <span>Este QR Code expira em <strong id="timerDisplay">15:00</strong></span>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <script src="/script.js"></script>
 </body>
